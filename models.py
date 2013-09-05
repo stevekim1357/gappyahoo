@@ -54,32 +54,6 @@ class Contact(ndb.Model):
 	trial_time=ndb.DateTimeProperty(default=datetime.datetime.now())
 	trial_age=ndb.ComputedProperty(lambda self: (datetime.datetime.now()-self.trial_time).total_seconds())
 	
-	# we don't need to know its residential
-	shipping_address=ndb.StringProperty(indexed=False,default='')
-	
-	# shipping method preference
-	# write whatever you want
-	# eg. state, carrier, international
-	shipping_preference=ndb.StringProperty(indexed=False,default='')
-	
-	# payment method preference
-	# write whatever you want
-	# eg. cash only, COD
-	payment_preference=ndb.StringProperty(indexed=False,default='')
-	
-	# user reputation score
-	# we shouldn't save comments here because this will burden datastore everytime we need
-	# to validate Contact. Instead, we will retrieve comments and compute brand_equity score
-	# when somebody views this user's comments.
-	# user_comments=ndb.KeyProperty(kind='UserComment',repeated=True)
-	
-	# reputation score should not be computed!
-	# thus allowing super user to manually set its value.
-	# this is potentially needed to help user transit a status
-	# from other site to ours
-	reputation_score=ndb.IntegerProperty(default=100)
-	reputation_link=ndb.StringProperty()
-	
 	# bank ending balance
 	# this is how much money this user has on his account
 	# payout will withdraw from this; payin will deposit to this
@@ -87,35 +61,6 @@ class Contact(ndb.Model):
 	# so by getting sum of transactions and know this ending balance,
 	# we can derive beginning balance also.
 	cash=ndb.FloatProperty(default=0)
-
-	def is_trial(self):
-		# if it's in Trial period
-		# Trial is limited to 30-day beginning at first creation of this Contact record
-		# TODO: a CRON job to remove Trial from Contact based on 30-day age rule
-		return 'Trial' in self.active_roles and self.trial_age<(TRIAL_DAYS*24*3600)
-
-	def can_be_super(self):
-		return self.nickname=='anthem.market.place'
-				
-	def can_be_doc(self):
-		# if a Doc membership is Active
-		return any([r in ['Doc','Super'] for r in self.active_roles]) or self.is_trial()
-
-	def can_be_nur(self):
-		# if a Nur membership is Active
-		return any([r in ['Nur','Super'] for r in self.active_roles]) or self.is_trial()
-
-	def can_be_client(self):
-		# if a Client membership is Active
-		return any([r in ['Client','Super'] for r in self.active_roles]) or self.is_trial()
-
-	def get_eligible_memberships(self):
-		available=[]
-		if 'Nur' not in self.active_roles:
-			available.append('Nur')
-		if 'Doc' not in self.active_roles:
-			available.append('Doc')
-		return available
 	
 	def signup_membership(self,g_order):
 		# add auditing record
@@ -234,16 +179,6 @@ class Ticker(MyBaseModel):
 	money_value=ndb.FloatProperty()
 
 				
-#######################################
-#
-# Communication models
-#
-#######################################
-class UserComment(MyBaseModel): 
-	comment=ndb.StringProperty()
-	rating=ndb.IntegerProperty() # 1-5
-
-
 #######################################
 #
 # Channel models

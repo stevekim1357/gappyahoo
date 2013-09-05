@@ -28,31 +28,16 @@ routes = [
 	Route('/auth/<provider>/callback', handler='handlers.AuthHandler:_auth_callback', name='auth_callback'),
 
 	# admin pages
-	Route('/admin/contact/reputation/link', handler='admin.AdminContactReputationLinkHandler', name='admin-contact-reputation-link'),
-	Route('/admin/contact/reputation/score', handler='admin.AdminContactReputationScoreHandler', name='admin-contact-reputation-score'),
 	Route('/admin/contact', handler='admin.AdminContactHandler', name='admin-contact'),
-	Route('/admin/cart', handler='admin.AdminCartHandler', name='admin-cart'),
 	
 	# buyorder controllers
 	Route('/blob/serve/<resource:[^/]+>/', handler='gappyahoo.ServeHandler',name='blobstore-serve'),
-	Route('/buyorder/edit/<order_id:\d+>/', handler='gappyahoo.EditBuyOrder',name='buyorder-edit'),
-	Route('/buyorder/delete/<order_id:\d+>/', handler='gappyahoo.DeleteBuyOrder',name='buyorder-delete'),
-	Route('/buyorder/close/<order_id:\d+>/', handler='gappyahoo.CloseBuyOrder',name='buyorder-close'),
-	Route('/buyorder/open/<order_id:\d+>/', handler='gappyahoo.OpenBuyOrder',name='buyorder-open'),
-	Route('/buyorder/new', handler='gappyahoo.PublishNewBuyOrder', name='buyorder-new'),
-	Route('/buyorder/browse/<order_id:\d+>/', handler='gappyahoo.BrowseBuyOrderById',name='buyorder-browse-id'),
-	Route('/buyorder/browse', handler='gappyahoo.BrowseBuyOrder',name='buyorder-browse'),
-	Route('/buyorder/owner/<owner_id:\d+>/<cat:[^/]+>/', handler='gappyahoo.BrowseBuyOrderByOwnerByCat',name='buyorder-browse-owner-cat'),  
-	Route('/buyorder/owner/<owner_id:\d+>/', handler='gappyahoo.BrowseBuyOrderByOwner',name='buyorder-browse-owner'),  
-	Route('/buyorder/manage', handler='gappyahoo.ManageBuyOrder',name='buyorder-manage'),  
-	
 
 	# user controllers
 	Route('/user/contact/preference',handler='gappyahoo.ManageUserContactPreference',name='user-contact-preference'),	
 	Route('/user/contact',handler='gappyahoo.ManageUserContact',name='user-contact'),	
 	Route('/user/membership/cancel/<role:\w+>/',handler='gappyahoo.ManageUserMembershipCancel',name='user-membership-cancel'),	
 	Route('/user/membership',handler='gappyahoo.ManageUserMembership',name='user-membership'),	
-	Route('/user/riskprofile',handler='gappyahoo.ViewUserRiskProfile',name='user-risk-profile'),	
 	
 	
 	# channel controller
