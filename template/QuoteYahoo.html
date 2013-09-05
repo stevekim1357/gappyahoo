@@ -1,0 +1,35 @@
+{% extends "/template/base.html" %}
+
+{% block customJS %}
+<script type="text/javascript">
+	j$(document).ready(function(){
+		j$('#btn-submit').click(function(){
+			var tickers=j$('#tickers').val();
+			j$.post(
+				'/quote/yahoo',
+				{'tickers':tickers},
+				function(result){
+					var data=j$.parseJSON(result); 
+					console.log(data); 
+				}
+			);
+		});
+	});
+
+</script>
+
+{% endblock %}
+
+
+{% block main %}
+
+<table class="table-row-border" style="width:100%;">
+<tr><td>
+<label class="ss-label">Ticker Symbols:
+<input class="ss-input" type="text" placeholder="Ticker Symbols, delimited by comma" id="tickers" name="tickers" />
+<input type="submit" value="Submit" id="btn-submit"/>
+</td></tr>
+
+</table>
+
+{% endblock %}

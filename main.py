@@ -30,8 +30,9 @@ routes = [
 	# admin pages
 	Route('/admin/contact', handler='admin.AdminContactHandler', name='admin-contact'),
 	
-	# buyorder controllers
+	# controllers
 	Route('/blob/serve/<resource:[^/]+>/', handler='gappyahoo.ServeHandler',name='blobstore-serve'),
+	Route('/quote/yahoo', handler='gappyahoo.YahooQuoteHandler', name='yahoo-quote'),
 
 	# user controllers
 	Route('/user/contact/preference',handler='gappyahoo.ManageUserContactPreference',name='user-contact-preference'),	
