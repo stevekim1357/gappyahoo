@@ -44,5 +44,3 @@ admin_console:
   pages:
   - name: Contact Admin
     url: /admin/contact
-  - name: Cart Admin
-    url: /admin/cart
