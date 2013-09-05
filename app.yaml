@@ -1,0 +1,48 @@
+application: gappyahoo
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /static
+  static_dir: static
+  
+- url: /_ah/channel/connected/
+  script: main.app
+
+- url: /_ah/channel/disconnected/
+  script: main.app
+  
+- url: /wallet/postback
+  script: main.app
+
+- url: /admin/.*
+  script: main.app
+  login: admin
+        
+- url: /.*
+  script: main.app
+  login: required
+  
+libraries:
+- name: webapp2
+  version: latest
+  
+- name: jinja2
+  version: latest
+
+pagespeed:
+  enabled_rewriters:
+  - MinifyCss
+
+inbound_services:
+- channel_presence
+
+
+admin_console:
+  pages:
+  - name: Contact Admin
+    url: /admin/contact
+  - name: Cart Admin
+    url: /admin/cart
