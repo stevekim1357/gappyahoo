@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>Anthem Market Place</title>
+	<meta name="author" content="Feng X.">
+	
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.js"></script>
+	<script type="text/javascript">
+		// some global initialization
+		var j$=jQuery.noConflict();
+	</script>
+
+	<link rel="stylesheet" type="text/css" href="/static/css/reset-min.css">
+	<LINK REL=StyleShyeet HREF="/static/css/navigation.css" TYPE="text/css" MEDIA=screen>
+	<LINK REL=StyleSheet HREF="/static/css/screen.css" TYPE="text/css" MEDIA=screen>
+</head>
+
+{% autoescape true %}
+<body>
+
+
+{% block header%}
+
+{% endblock %}
+
+{% block main %}
+
+{% endblock %}
+
+{% block footer %}
+{% endblock %}
+
+ 
+
+	<!-- Channel API, must be the first one! -->
+	<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+	<LINK REL=StyleSheet HREF="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.1/themes/smoothness/jquery-ui.min.css" TYPE="text/css" MEDIA=screen>
+
+	<!-- JS to turn a form into AJAX call -->
+	<script src="/static/formjs/jquery.form.js"></script> 
+
+	<!-- toast -->
+	<script src="/static/toast/jquery.toastmessage.js" type="text/javascript"></script> 
+	<LINK REL=StyleSheet HREF="/static/toast/css/jquery.toastmessage.css" TYPE="text/css" MEDIA=screen>
+	
+	<!-- jQuery dataTable -->
+	<script type="text/javascript" src="/static/DataTables-1.9.4/media/js/jquery.dataTables.min.js"></script>
+	<LINK REL=StyleSheet HREF="/static/DataTables-1.9.4/media/css/jquery.dataTables.css" TYPE="text/css" MEDIA=screen>
+	<link rel="stylesheet" type="text/css" href="/static/beautiful_tables/cell_styles.css">
+		
+	<!-- carousel -->
+	<script type="text/javascript" src="/static/carouFredSel-6.2.0/jquery.carouFredSel-6.2.0.js"></script>
+
+	<!-- easing -->
+	<!-- http://gsgd.co.uk/sandbox/jquery/easing/ -->
+	<script type="text/javascript" src="/static/easing/jquery.easing.min.js"></script>
+
+	<!-- tinyMCE -->
+	<script type="text/javascript" src="/static/tinymce/js/tinymce/jquery.tinymce.min.js"></script>	
+	<script type="text/javascript" src="/static/tinymce/js/tinymce/tinymce.min.js"></script>	
+		
+	<!-- highcharts -->
+	<script src="http://code.highcharts.com/highcharts.js"></script>
+	<script src="http://code.highcharts.com/highcharts-more.js"></script>
+	<script src="http://code.highcharts.com/modules/exporting.js"></script>
+
+	<!-- css3 workaround -->
+	<script type="text/javascript" src="/static/css3ie/modernizr.custom.18013.js"></script>
+		
+        	
+	<script type="text/javascript">
+	// some global initialization
+	var j$=jQuery.noConflict();
+	
+	j$(document).ready(function(){
+		j$('input[type="date"]').datepicker();
+
+		
+	});
+	</script>	
+	
+	{% block customJS %}{% endblock %}
+</body>
+{% endautoescape %}
+
+</html>

@@ -1,0 +1,176 @@
+{% extends "/template/UserBase.html" %}
+
+{% block customJS %}
+<script type="text/javascript">
+//Success handler
+	var signupSuccessHandler = function(purchaseAction){
+		var orderId=purchaseAction['response']['orderId'];
+		j$().toastmessage('showNoticeToast','Thank you for your subscription! Your order number is '+orderId);
+    }	
+	var signupFailureHandler = function(purchaseAction){
+		var error=purchaseAction['response']['errorType'];
+		switch (error){
+			case 'MERCHANT_ERROR':
+				j$().toastmessage('showErrorToast','Purchase request contains errors. Contact system Admin.');
+				break;
+			case 'PURCHASE_CANCELLED':
+				j$().toastmessage('showErrorToast','Buyer cancelled purchase or declined payment');
+				break;
+			case 'POSTBACK_ERROR':
+				j$().toastmessage('showErrorToast','Failure to acknowledge postback notification');
+				break;
+			case 'INTERNAL_SERVER_ERROR':
+				j$().toastmessage('showErrorToast','Internal Google error');
+				break;
+				
+		}
+    }	
+
+	j$(document).ready(function(){
+		
+		// cancel membership
+		j$('span[item="cancel-membership"]').click(function(){
+			j$.post(
+				'/user/membership/cancel/'+j$(this).attr('role')+'/',
+				function(result){
+					j$().toastmessage('showSuccessToast','Thank you for using our service. Hope we will see you soon.');
+				}
+			);
+		});
+		
+		// level 1 navigation
+		j$('#nav-user').addClass('level-1-navigation-selected');
+		
+		// level 2 navigation
+		j$('.level-2-navigation').show();
+		j$('#nav-user-membership').addClass('level-2-navigation-selected');
+		
+		// signup membership
+		j$('span[item="signup-membership"]').click(function(){
+			var role=j$(this).attr('role');
+			j$.post(
+				'/wallet/token',
+				{'role':role},
+				function(result){
+					// we get a token
+					google.payments.inapp.buy({
+						'jwt'     : result,
+						'success' : signupSuccessHandler,
+						'failure' : signupFailureHandler
+					});
+				}
+			);
+		});
+	});
+</script>
+{% endblock %}
+
+{% block main %}
+<h1 class="ariel-blue">Memberships</h1>
+
+<p class="ariel-blue ariel-p">
+You can <strong>add</strong> or <strong>cancel</strong> a membership at any time to have the optimal functions
+supporting your business. <a href="">Learn more</a> of different memberships and choose the ones that best fit your interest.
+</p>
+
+<!--
+<blockquote>
+	<h3>Beta Testing</h3>
+	<p>
+	When beta testing, you can use the following credit card numbers:
+	</p>
+	
+	<table class="ariel-table table-row-border">
+	<thead>
+	<tr>
+  	<td>Card type</td>
+	<td>Card number</td>
+  	<td>CVC</td>
+	<td>Expiration date
+	</td></tr>
+	</thead>
+	<tbody>
+	
+	<tr>
+  	<td>American Express</td>
+	<td>3782 8224 6310 005</td>
+  	<td>any four digits</td>
+	<td>any future date</td>
+	</tr>
+	
+	<tr>
+  	<td>Discover</td>
+	<td>6011 1111 1111 1117</td>
+  	<td>any three digits</td>
+	<td>any future date</td>
+	</tr>
+	
+	<tr>
+  	<td>MasterCard</td>
+	<td>5555 5555 5555 4444</td>
+  	<td>any three digits</td>
+	<td>any future date</td>
+	</tr>
+	
+	<tr>
+  	<td>Visa</td>
+	<td>4111 1111 1111 1111</td>
+  	<td>any three digits</td>
+	<td>any future date</td>
+	</tr>
+	</tbody>
+	</table>
+</blockquote>
+-->
+
+<div class="quick-pane">
+	<table class="table-row-border">
+	<thead>	<tr><td>Role</td>
+				<td>Status</td>
+				<td>Transaction ID</td>
+				<td></td>
+			</tr>
+	</thead>
+	<tbody>
+		<!-- signed memberships -->
+		{% for m in me.memberships %}
+			{% if m %}
+			<tr><td>
+					{{ m.get().role }}
+				</td>
+				<td>
+					Active
+				</td>
+				<td>
+					{{ m.get().order_id }}
+				</td>
+				<td>
+					{% if m.get().role != 'Trial' %}
+					<span class="command-link" role="{{ m.get().role }}" item="cancel-membership">Cancel</span>
+					{% elif me.trial_age > 30*24*3600 %}
+						Trial has expired
+					{% else %}
+						{% set day_left = 30-(me.trial_age/24/3600) %}
+						{{ '%0.1f'|format(day_left|float)  }} days left
+					{% endif %}
+				</td>
+			</tr>
+			{% endif %}
+		{% endfor %}
+		
+		<!-- unsigned memberships -->
+		{% for m in membership_options %}
+			<tr>
+				<td>{{ m }}
+				</td><td>
+				</td><td>
+				</td><td>
+					<span class="command-link" role="{{ m }}" item="signup-membership">Signup</span>
+				</td>
+			</tr>
+		{% endfor %}
+	</tbody>	
+	</table>
+</div>
+
+{% endblock %}

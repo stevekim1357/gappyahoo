@@ -1,0 +1,52 @@
+{% extends "/template/AdminBase.html" %}
+
+{% block customJS %}
+	<script type="text/javascript">
+		j$(document).ready(function(){
+			j$('table#cart-table').dataTable();
+		});
+	</script>
+{% endblock %}
+
+{% block main %}
+<table class="two-col-table" id="cart-table">
+	<thead>
+	<tr><td>
+			ID
+		</td><td>
+			Seller
+		</td><td>
+			Buyer
+		</td><td>
+			Status
+		</td><td>
+			Shipping Status
+		</td><td>
+			Payable
+		</td>
+	</tr>
+	</thead>
+	<tbody>
+	{% for c in carts %}
+	<tr><td>
+		<a href="http://anthem-market-place.appspot.com/cart/review?owner={{c.owner.id()}}&cart={{ c.key.id() }}&audit">
+			Cart# {{ c.key.id () }}
+		</a>
+		</td><td>
+			{{ c.terminal_seller.get().nickname }}
+		</td><td>
+			{% if c.broker %}
+				{{ c.broker.get().nickname }}
+			{% endif %}
+		</td><td>
+			{{ c.status }}
+		</td><td>
+			{{ c.shipping_status }}
+		</td><td>
+			{{ c.payable }}
+		</td>
+	</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endblock %}

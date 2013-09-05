@@ -1,0 +1,25 @@
+{% extends "/template/base.html" %}
+
+{% block level_2_navigation %}
+	<ul>
+		<!-- carts that are mine, so I'm seller -->
+		{% if me.can_be_nur() %}
+		<li id="nav-cart-as-seller">
+			<a href="/cart/manage/seller" title="Manage carts as a seller">
+				<img src="/static/img/minus_button_1-128.png" />
+			</a>
+			<h3>Selling Carts</h3>
+		</li>
+		{% endif %}
+
+		<!-- carts that need my approval, so I'm broker -->
+		{% if me.can_be_doc() %}
+		<li id="nav-cart-as-buyer">
+			<a href="/cart/manage/buyer" title="Manage carts as a buyer">
+				<img src="/static/img/button_new_2-128.png" />
+			</a>
+			<h3>Buying Carts</h3>
+		</li>
+		{% endif %}
+	</ul>
+{% endblock %}
