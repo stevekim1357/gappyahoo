@@ -127,6 +127,26 @@ class YahooQuoteHandler(MyBaseHandler):
 			logging.info(result.content)
 		else:
 			self.response.write(result)
+
+class NewsAnalysisHandler(MyBaseHandler):
+	def get(self):
+		master_content=[]
+		for s in NewsSource.query():
+			hit_list=[]
+			crawl_result,history_list=myHTMLParser(s.url,s.css_selector,s.length_of_interest,s.link_depth,0,hit_list)
+			master_content += crawl_result
+			logging.info(s.source+' :'+len(history_list))
+		
+        # initiate a Counter
+		master_interest=[]
+		for content in master_content:
+			c=Counter([i.replace('\t','').strip() for i in content.split(' ') if len(i.replace('\t','').strip())>0])
+			master_interest.append(c.most_common(length))
+
+		merged = [x for sublist in master_interest for x in sublist]
+		interest_list=sorted(merged,key=lambda x: x[1],reverse=True)
+		
+		logging.info(interest_list)	
 		
 ####################################################
 #
@@ -155,12 +175,11 @@ class ManageUserMembershipCancel(MyUserBaseHandler):
 
 class ManageUserContact(MyBaseHandler):
 	def get(self):	
-		#try:
-		if self.me.can_be_super():
+		try:
 			self.template_values['me']=Contact.get_by_id(self.request.get('id'))
 			logging.debug('person identity swap')
-		else: pass
-		#except: pass
+		except: pass
+		
 		# render
 		template = JINJA_ENVIRONMENT.get_template('/template/ManageUserContact.html')
 		self.response.write(template.render(self.template_values))
@@ -181,29 +200,6 @@ class ManageUserContactPreference(MyBaseHandler):
 		self.me.put()
 		self.response.write('0')
 
-class ViewUserRiskProfile(MyBaseHandler):
-	def post(self):
-		# get all outstanding buyorders
-		orders=BuyOrder.query(ndb.AND(BuyOrder.is_closed==False,BuyOrder.unfilled_qty>0))
-		
-		# group by owner/broker
-		group_by_owner={}
-		for o in orders:
-			if o.owner not in group_by_owner:
-				group_by_owner[o.owner]=[o]
-			else:
-				group_by_owner[o.owner].append(o)
-		
-		# get chart data
-		data=[]
-		for owner,orders in group_by_owner.iteritems():
-			total_payable=sum([o.payable for o in orders])
-			data.append({
-				'name':owner.get().nickname,
-				'ownerId':owner.id(),
-				'data':[[total_payable,len(orders),owner.get().reputation_score+100]]
-			})
-		self.response.write(json.dumps(data))
 		
 ####################################################
 #
@@ -300,171 +296,6 @@ class GoogleWalletPostback(webapp2.RequestHandler):
 # Report Controllers
 #
 ####################################################
-
-class ReportMyIncome(MyBaseHandler):
-	def get(self,in_days):
-		if not self.me.is_active:
-			template = JINJA_ENVIRONMENT.get_template('/template/Membership_New.html')
-			self.response.write(template.render(self.template_values))
-			return		
-		
-		self.template_values['filter_days']=in_days
-		self.template_values['end']=datetime.date.today()
-		self.template_values['start']=datetime.date.today()+datetime.timedelta(-1*int(in_days))
-		
-		# get all my slips
-		# slips party "a" is always the one who initiated it
-		# you can also use the "owner" key, it's the same
-		if self.me.can_be_doc():
-			# if you are doc, you view both in and out
-			slips=AccountingSlip.query(ancestor=ndb.Key(DummyAncestor,'BankingRoot')).filter(ndb.AND(ndb.OR(AccountingSlip.party_a==self.me.key,AccountingSlip.party_b==self.me.key),AccountingSlip.age<=float(in_days)*24*3600)).order(-AccountingSlip.age)
-		elif self.me.can_be_nur():
-			# if you are nur, you are party b
-			slips=AccountingSlip.query(ancestor=ndb.Key(DummyAncestor,'BankingRoot')).filter(ndb.AND(AccountingSlip.party_b==self.me.key,AccountingSlip.age<=float(in_days)*24*3600)).order(-AccountingSlip.age)
-			
-		# ending balance
-		ending=self.me.cash
-		
-		# beginning balance
-		transactions=[]
-		for s in slips:
-			if s.party_a==self.me.key:
-				if s.money_flow=='a-2-b': # I'm A and money is to B
-					# money go out
-					transactions.append(-1*s.amount)
-				else:
-					# money come in
-					transactions.append(s.amount)
-			elif s.party_b==self.me.key: # flip logic from above
-				if s.money_flow=='a-2-b': # I'm B and money from A
-					# money come in
-					transactions.append(s.amount)
-				else:
-					# money go out
-					transactions.append(-1*s.amount)
-		beginning=ending-sum(transactions)
-		
-		data=[beginning]
-		for t in transactions:
-			# aggregated income growth
-			data.append(data[-1]+t)
-		data.append(ending)
-		self.template_values['beginning']=beginning
-		self.template_values['ending']=ending
-		self.template_values['data']=json.dumps(data)
-		
-		# render
-		self.template_values['slips']=slips
-		template = JINJA_ENVIRONMENT.get_template('/template/ReportMyIncome.html')
-		self.response.write(template.render(self.template_values))
-
-class ReportMyBuyer(MyBaseHandler):
-	def get(self, in_days):
-		if not self.me.is_active:
-			template = JINJA_ENVIRONMENT.get_template('/template/Membership_New.html')
-			self.response.write(template.render(self.template_values))
-			return		
-
-		self.template_values['filter_days']=in_days
-		self.template_values['end']=datetime.date.today()
-		self.template_values['start']=datetime.date.today()+datetime.timedelta(-1*int(in_days))
-		
-		# we are to determine who is a good buyer (Doc) to do business with
-		
-		# get all shopping carts that I'm a seller  -- Nur within the last [in_days]
-		# NOTE: do not include OPEN cart because open cart broker=None
-		carts=BuyOrderCart.query(BuyOrderCart.terminal_seller==self.me.key,BuyOrderCart.age<=float(in_days)*24*3600)
-		carts=[c for c in carts if c.broker]
-		self.template_values['carts']=carts
-		
-		# group by broker
-		brokers={}
-		for c in carts:
-			s=c.broker
-			if s not in brokers: brokers[s]=[c]
-			else: brokers[s].append(c)
-			
-		# this represents size of a deal
-		# Q: who is your large supplier?
-		payable={}
-		for s in brokers:
-			payable[s]=sum([a.payable for a in brokers[s]])
-		self.template_values['payable']=payable
-		self.template_values['payable_chart_data']=json.dumps([(s.get().nickname, payable[s]) for s in payable])
-		
-		# render
-		template = JINJA_ENVIRONMENT.get_template('/template/ReportMyBuyer.html')
-		self.response.write(template.render(self.template_values))
-		
-class ReportMySeller(MyBaseHandler):
-	def get(self, in_days):
-		if not self.me.is_active:
-			template = JINJA_ENVIRONMENT.get_template('/template/Membership_New.html')
-			self.response.write(template.render(self.template_values))
-			return		
-
-		self.template_values['filter_days']=in_days
-		self.template_values['end']=datetime.date.today()
-		self.template_values['start']=datetime.date.today()+datetime.timedelta(-1*int(in_days))
-		
-		# we are to determine who is a good seller (Nur) to do business with
-		
-		# get all shopping carts that I'm a buyer  -- Doc
-		# including open ones within the last [in_days]
-		# NOTE: must use float for comparison, otherwise it will return None
-		carts=BuyOrderCart.query(BuyOrderCart.broker==self.me.key,BuyOrderCart.age<=float(in_days)*24*3600)
-		self.template_values['carts']=carts
-		
-		# group by sellers
-		sellers={}
-		for c in carts:
-			s=c.terminal_seller
-			if s not in sellers: sellers[s]=[c]
-			else: sellers[s].append(c)
-			
-		# this represents size of a deal
-		# Q: who is your large supplier?
-		payable={}
-		for s in sellers:
-			payable[s]=sum([a.payable for a in sellers[s]])
-		self.template_values['payable']=payable
-		self.template_values['payable_chart_data']=json.dumps([(s.get().nickname, payable[s]) for s in payable])
-		
-		# render
-		template = JINJA_ENVIRONMENT.get_template('/template/ReportMySeller.html')
-		self.response.write(template.render(self.template_values))
-		
-class ReportBuyOrderPopular(MyBaseHandler):
-	def get(self,in_days):
-		if not self.me.is_active:
-			template = JINJA_ENVIRONMENT.get_template('/template/Membership_New.html')
-			self.response.write(template.render(self.template_values))
-			return		
-
-		self.template_values['filter_days']=in_days
-		self.template_values['end']=datetime.date.today()
-		self.template_values['start']=datetime.date.today()+datetime.timedelta(-1*int(in_days))
-		
-		# get all carts that I'm the buyer
-		# including open ones within the last [in_days]
-		# NOTE: must use float for comparison, otherwise it will return None
-		carts=BuyOrderCart.query(BuyOrderCart.broker==self.me.key,BuyOrderCart.age<=float(in_days)*24*3600)
-		self.template_values['carts']=carts
-
-		payable={}
-		fills=[]
-		for c in carts:
-			fills+=c.fills
-			for f in c.fills:
-				if f.order in payable: payable[f.order] += f.payable
-				else: payable[f.order]=f.payable
-		self.template_values['payable']=payable
-		self.template_values['payable_chart_data']=json.dumps([(s.get().name, payable[s]) for s in payable])
-		self.template_values['fills']=fills
-		
-		# render
-		template = JINJA_ENVIRONMENT.get_template('/template/ReportBuyOrderPopular.html')
-		self.response.write(template.render(self.template_values))
 
 
 ####################################################
@@ -625,166 +456,4 @@ class ChannelListOnlineUsers(webapp2.RequestHandler):
 			self.response.write(json.dumps(online_users))
 		else: self.response.write('-1')
 		
-
-####################################################
-#
-# Banking Controllers
-#
-####################################################
-
-class DeleteBankSlip(MyBaseHandler):
-	def post(self, slip_id):
-		slip=AccountingSlip.get_by_id(int(slip_id),parent=ndb.Key('DummyAncestor','BankingRoot'))
-		assert slip
-
-		# update cart		
-		cart=slip.cart_key.get()
-		cart.payout_slips=[c for c in cart.payout_slips if c != slip.key]		
-		cart.payin_slips=[c for c in cart.payin_slips if c != slip.key]
-		cart.put()
-		
-		# update contact cash account
-		# this is the reverse of when slip was created
-		# remember, cart broker is always party_a!
-		party_a=slip.party_a.get()
-		party_b=slip.party_b.get()
-		if slip.money_flow == 'a-2-b':
-			# this was a payout
-			party_a.cash+=slip.amount
-			party_b.cash-=slip.amount
-		elif slip.money_flow=='b-2-a':
-			# this was a payin
-			party_a.cash-=slip.amount
-			party_b.cash+=slip.amount
-		
-		party_a.put()
-		party_b.put()
-		self.response.write('0')
-
-class BankingCart(MyBaseHandler):
-	def get(self):
-		if not self.me.is_active:
-			template = JINJA_ENVIRONMENT.get_template('/template/Membership_New.html')
-			self.response.write(template.render(self.template_values))
-			return		
-
-		self.template_values['url']=uri_for('cart-banking')
-		self.template_values['review_url']=uri_for('cart-review')		
-	
-		# payable carts
-		payable_carts=BuyOrderCart.query(ndb.AND(BuyOrderCart.broker==self.me.key,BuyOrderCart.payable_balance>0.0))
-		
-		if self.request.GET.has_key('seller'):
-			seller_id=self.request.GET['seller']
-			payable_carts=payable_carts.filter(BuyOrderCart.terminal_seller==ndb.Key('Contact',seller_id))
-		self.template_values['payable_carts']=payable_carts
-		self.template_values['sellers']=set([c.terminal_seller for c in payable_carts])
-		
-		# receivable carts
-		receivable_carts=BuyOrderCart.query(ndb.AND(BuyOrderCart.broker==self.me.key,BuyOrderCart.receivable_balance>0.0))
-		if self.request.GET.has_key('client'):
-			client_id=self.request.GET['client']
-			receivable_carts=receivable_carts.filter(BuyOrderCart.terminal_buyer==ndb.Key('Contact',client_id))				
-		self.template_values['receivable_carts']=receivable_carts
-		self.template_values['clients']=set([c.terminal_buyer for c in receivable_carts if c.terminal_buyer])
-		
-		# render
-		template = JINJA_ENVIRONMENT.get_template('/template/BankingCart.html')
-		self.response.write(template.render(self.template_values))
-	
-	def post(self):
-		status='0'
-		
-		action=self.request.POST['action']
-		data=json.loads(self.request.POST['data'])
-		bundle=[]
-				
-		if action=='payable':
-			# convert ID to INT, because datastore uses INT, not string!
-			payables={int(d['id']):d['amount'] for d in data}			
-			carts=BuyOrderCart.query(ndb.AND(BuyOrderCart.broker==self.me.key,BuyOrderCart.payable_balance>0))
-			cart_dict={c.key.id():(c,payables[c.key.id()]) for c in carts if c.key.id() in payables}
-			
-			for id,val in cart_dict.iteritems():
-				cart,pay=val
-				
-				# create a slip
-				slip=AccountingSlip(parent=ndb.Key(DummyAncestor,'BankingRoot'))
-				slip.amount=float(pay)
-				slip.party_a=self.me.key
-				slip.party_b=cart.terminal_seller
-				slip.money_flow='a-2-b'
-				slip.last_modified_by=self.me.key
-				slip.owner=self.me.key
-				slip.cart_key=cart.key
-				slip.put() # has to save here, otherwise, cart update will fail for computed property being None!
-
-				# notify
-				send_chat(cart.broker.get().nickname,cart.terminal_seller.get().nickname,'Buyer of cart %s has added a PAYMENT!' % cart.key.id())
-				
-				# create an audit record
-				slip.audit_me(self.me.key,'Cart Status',cart.status,'')
-				slip.audit_me(self.me.key,'Shipping Status',cart.shipping_status,'')
-				
-				# add to cart
-				# cart only wants the slip key!
-				cart.payout_slips.append(slip.key)
-				
-				# payouts, deduct this amount from my contact
-				self.me.cash-=float(pay)
-				self.me.put()
-				
-				seller=cart.terminal_seller.get()
-				seller.cash+=float(pay)
-				seller.put()
-				
-				# notify
-				send_chat('System',cart.terminal_seller.get().nickname,'%s has added to your cash account!' %(str(pay)))
-
-				# we will update cart later
-				bundle.append(cart)
-				
-		elif action=='receivable':
-			# convert ID to INT, because datastore uses INT, not string!
-			receivables={int(d['id']):d['amount'] for d in data}			
-			carts=BuyOrderCart.query(ndb.AND(BuyOrderCart.broker==self.me.key,BuyOrderCart.receivable_balance>0))
-			cart_dict={c.key.id():(c,receivables[c.key.id()]) for c in carts if (c.key.id() in receivables)}
-			
-			for id,val in cart_dict.iteritems():
-				cart,pay=val
-				# create a slip
-				slip=AccountingSlip(parent=ndb.Key(DummyAncestor,'BankingRoot'))
-				slip.amount=float(pay)
-				slip.party_a=self.me.key
-				slip.party_b=cart.terminal_buyer
-				slip.money_flow='b-2-a'
-				slip.last_modified_by=self.me.key
-				slip.owner=self.me.key
-				slip.cart_key=cart.key
-				slip.put() # has to save here!
-
-				# create an audit record
-				slip.audit_me(self.me.key,'Cart Status',cart.status,'')
-				slip.audit_me(self.me.key,'Shipping Status',cart.shipping_status,'')
-						
-				# add to cart
-				# cart only wants the slip key!
-				cart.payin_slips.append(slip.key)
-				
-				# update contact account balance
-				self.me.cash+=float(pay)
-				self.me.put()
-				
-				if (cart.terminal_buyer):
-					buyer=cart.terminal_buyer.get()
-					buyer.cash-=float(pay)
-					buyer.put()			
-				
-				# add cart to bundel
-				bundle.append(cart)
-			
-		ndb.put_multi(bundle)
-		
-		# return status
-		self.response.write(status)
 

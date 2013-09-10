@@ -172,6 +172,13 @@ class MyBaseModel(ndb.Model):
 # Business models
 #
 #######################################
+class NewsSource(ndb.Model):
+	url=ndb.StringProperty(required=True)
+	source=ndb.StringProperty(default='Other')
+	css_selector=ndb.StringProperty()
+	length_of_interest=ndb.IntegerProperty(default=50) # length of interest list
+	link_depth=ndb.IntegerProperty(default=2) # follow links
+	
 class Ticker(MyBaseModel):
 	name=ndb.StringProperty()
 	symbol=ndb.StringProperty()

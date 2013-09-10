@@ -19,7 +19,7 @@ handlers:
 
 - url: /admin/.*
   script: main.app
-  login: admin
+  #login: admin
         
 - url: /.*
   script: main.app
@@ -32,6 +32,9 @@ libraries:
 - name: jinja2
   version: latest
 
+- name: lxml
+  version: latest
+  
 pagespeed:
   enabled_rewriters:
   - MinifyCss
