@@ -9,6 +9,10 @@ from collections import Counter # awesome!
 from lxml import html
 from lxml.html.clean import clean_html
 from urlparse import urlparse
+import feedparser
+
+def myRSSParser(url):
+
 
 def myHTMLParser(url,css,length,depth,current_depth,hit_list):
 	if url in hit_list: return ([],[])
