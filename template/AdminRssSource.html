@@ -1,0 +1,73 @@
+{% extends "/template/AdminBase.html" %}
+
+{% block customJS %}
+<script type="text/javascript">
+	j$(document).ready(function(){
+		j$('span.command-link[type="add"]').click(function(){
+			var url=j$('#url').val();
+			var provider=j$('#provider').val();
+			
+			j$.post(
+				'/admin/rsssource',
+				{'action':'add','url':url,'provider':provider},
+				function(result){
+					j$().toastmessage('showNoticeToast','Rss Source has been saved');
+				}
+			);			
+		});
+		
+		j$('span.command-link[type="del"]').click(function(){
+			var id=j$(this).attr('itemID');
+			
+			j$.post(
+				'/admin/rsssource',
+				{'action':'delete','id':id},
+				function(result){
+					j$().toastmessage('showNoticeToast','Rss Source has been deleted');
+				}
+			);
+		});
+				
+		// level 1 navigation
+		j$('#nav-admin').addClass('level-1-navigation-selected');
+		
+		// level 2 navigation
+		j$('.level-2-navigation').show();
+		j$('#nav-rss-source').addClass('level-2-navigation-selected');	
+	});
+</script>
+{% endblock %}
+
+{% block main %}
+<table class="table-row-border" style="width:100%;">
+	<thead>
+		<tr><td>Provider</td>
+			<td>Feed URL</td>
+			<td>Source</td>
+			<td>E-Tag</td>
+			<td>Root Link</td>
+			<td></td>
+		</tr>
+	</thead>
+	<tbody>
+		{% for s in sources %}
+			<tr>
+				<td>{{ s.provider }}</td>
+				<td>{{ s.feed_url }}</td>
+				<td>{{ s.name }}</td>
+				<td>{{ s.etag }}</td>
+				<td>{{ s.root_link }}</td>
+				<td><span class="command-link" itemID="{{ s.key.id() }}" type="del">Delete</span></td>
+			</tr>
+		{% endfor %}
+		<tr>
+			<td><input name="source" id="provider" /></td>
+			<td><input type="url" name="url" id="url"/></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td><span class="command-link" type="add">Add</span></td>
+		</tr>
+	</tbody>
+</table>
+{% endblock %}

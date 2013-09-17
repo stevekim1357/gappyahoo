@@ -74,3 +74,25 @@ class AdminNewsSourceHandler(MyBaseHandler):
 			s_key.delete()
 			
 		self.response.write('0')
+
+class AdminRssSourceHandler(MyBaseHandler):
+	def get(self):
+		# get all source
+		self.template_values['sources']=RssSource.query()
+		template = JINJA_ENVIRONMENT.get_template('/template/AdminRssSource.html')
+		self.response.write(template.render(self.template_values))
+	
+	def post(self):
+		action=self.request.get('action')
+		if action=='add':
+			url=self.request.get('url')
+			provider=self.request.get('provider')
+		
+			s=RssSource(feed_url=url,provider=provider)
+			s.put()
+		elif action=='delete':
+			id=int(self.request.get('id'))
+			s_key=ndb.Key('RssSource',id)
+			s_key.delete()
+			
+		self.response.write('0')

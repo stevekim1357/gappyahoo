@@ -34,6 +34,9 @@ libraries:
 
 - name: lxml
   version: latest
+
+- name: numpy
+  version: latest
   
 pagespeed:
   enabled_rewriters:

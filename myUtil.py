@@ -10,10 +10,35 @@ from lxml import html
 from lxml.html.clean import clean_html
 from urlparse import urlparse
 import feedparser
+from collections import Counter
+#import nltk # assuming this available
 
-def myRSSParser(url):
+def myRssParser(source):
+	if source.keywords and source.etag:
+		#feed=feedparser.parse(source.feed_url,etag=source.etag)
+		feed=feedparser.parse(source.feed_url)
+		if feed['status']==304: return [] # no new update
+	else:
+		feed=feedparser.parse(source.feed_url)
+		if feed['status']!=200: return None # error
+		
+	# update source record
+	source.name=feed['feed']['title']
+	source.root_link=feed['feed']['link']
+	source.etag=feed['etag']
+	source.put()
+	
+	# get feed contents
+	content=[]
+	for i in feed['items']:
+		content.append({'headline':i['title'], 'link':i['id']})
 
+	# nltk sentiments
+	#for c in content:
+	#	rss=nltk.Text(nltk.word_tokenize(c['headline']))
 
+	return content
+	
 def myHTMLParser(url,css,length,depth,current_depth,hit_list):
 	if url in hit_list: return ([],[])
 	

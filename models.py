@@ -172,6 +172,15 @@ class MyBaseModel(ndb.Model):
 # Business models
 #
 #######################################
+class RssSource(ndb.Model):
+	name=ndb.StringProperty() # full name of the feed
+	feed_url=ndb.StringProperty(required=True) # feed url
+	etag=ndb.StringProperty() # etag, see http://pythonhosted.org/feedparser/http-etag.html
+	root_link=ndb.StringProperty() # used to aggregate sub feeds from a same source
+	provider=ndb.StringProperty() # user given idenntifiers, eg. Reuters, Bloomberg
+	keywords=ndb.PickleProperty()
+	
+	
 class NewsSource(ndb.Model):
 	url=ndb.StringProperty(required=True)
 	source=ndb.StringProperty(default='Other')

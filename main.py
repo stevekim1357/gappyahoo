@@ -30,11 +30,13 @@ routes = [
 	# admin pages
 	Route('/admin/contact', handler='admin.AdminContactHandler', name='admin-contact'),
 	Route('/admin/newssource', handler='admin.AdminNewsSourceHandler', name='admin-news-source'),
+	Route('/admin/rsssource', handler='admin.AdminRssSourceHandler', name='admin-rss-source'),
 	
 	# controllers
 	Route('/blob/serve/<resource:[^/]+>/', handler='gappyahoo.ServeHandler',name='blobstore-serve'),
 	Route('/quote', handler='gappyahoo.YahooQuoteHandler', name='yahoo-quote'),
 	Route('/news', handler='gappyahoo.NewsAnalysisHandler', name='news-analysis'),
+	Route('/rss', handler='gappyahoo.RssAnalysisHandler', name='rss-analysis'),
 
 	# user controllers
 	Route('/user/contact/preference',handler='gappyahoo.ManageUserContactPreference',name='user-contact-preference'),	

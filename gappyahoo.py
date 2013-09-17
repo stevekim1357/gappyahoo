@@ -146,8 +146,41 @@ class NewsAnalysisHandler(MyBaseHandler):
 		merged = [x for sublist in master_interest for x in sublist]
 		interest_list=sorted(merged,key=lambda x: x[1],reverse=True)
 		
-		logging.info(interest_list)	
+class RssAnalysisHandler(MyBaseHandler):
+	def get(self):
+		self.template_values['sources']=['Reuters']
+		template = JINJA_ENVIRONMENT.get_template('/template/RssAnalysis.html')
+		self.response.write(template.render(self.template_values))
 		
+	def post(self):
+		target=self.request.get('source')
+		
+		# iterate all sources with the same root
+		raw_data=[]
+		for source in RssSource.query(RssSource.provider==target):
+			result=myRssParser(source)
+						
+			if result: raw_data.append({'source':source.name,'feed':result})
+			elif len(result)==0: continue # no change
+			elif result==None: continue # status !=200, connection error
+		
+			# compile most_common keyword list
+			master_content=[r['headline'] for r in result]
+			master_interest=[]
+			for content in master_content:
+				c=Counter([i.replace('\t','').strip() for i in content.split(' ') if len(i.replace('\t','').strip())>0])
+				master_interest.append(c.most_common(100))
+	
+			merged = [x for sublist in master_interest for x in sublist]
+			interest_list=sorted(merged,key=lambda x: x[1],reverse=True)
+			
+			# save to record
+			source.keywords=interest_list
+			source.put()						
+		
+		# we have a list of dict {'headline':, 'link':}
+		self.response.write(json.dumps(raw_data))
+				
 ####################################################
 #
 # User/Membership Controllers
