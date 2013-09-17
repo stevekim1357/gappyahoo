@@ -1,0 +1,60 @@
+{% extends "/template/AnalysisBase.html" %}
+
+{% block customJS %}
+<script type="text/javascript">
+	j$(document).ready(function(){
+		j$('#source').change(function(){
+			var source=j$(this).val();
+			
+			j$.post(
+				'/rss',
+				{'source':source},
+				function(result){
+					var data=j$.parseJSON(result);
+					
+					var html='';
+					for (var i=0; i < data.length; i++){
+						var source_name=data[i].source;
+						html+='<div>';
+						html+='<h2 class="ariel-blue">'+source_name+'</h2>';
+						
+						var feed=data[i].feed;
+						html+='<ul>';
+						for (var j=0;j<feed.length;j++){
+							html+='<li>';
+							html+='<a href="'+feed[j].link+'">'+feed[j].headline+'</a>';
+							html+='</li>';
+						}
+						html+='</ul>';
+						html+='</div>';
+					}
+					j$('#case-comments').html(html);
+				}
+			);
+		});
+		
+		// level 1 navigation
+		j$('#nav-analysis').addClass('level-1-navigation-selected');
+		
+		// level 2 navigation
+		j$('.level-2-navigation').show();
+		j$('#nav-analysis-rss').addClass('level-2-navigation-selected');		
+	});
+
+</script>
+
+{% endblock %}
+
+
+{% block main %}
+
+<select id="source">
+	<option value=""></option>
+	{% for s in sources %}
+	<option value="{{s}}">{{ s }}</option>
+	{% endfor %}
+</select>
+
+<div id="case-comments">
+</div>
+{% endblock %}
