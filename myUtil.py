@@ -11,8 +11,27 @@ from lxml.html.clean import clean_html
 from urlparse import urlparse
 import feedparser
 from collections import Counter
-#import nltk # assuming this available
+import nltk # assuming this available
+from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
 
+def myNLTKParser(document):
+	lexical_diversity=len(document) / len(set(document))*1.0
+	
+	# POS tags
+	punkt_param = PunktParameters()
+	# if any customized abbrev
+	#punkt_param.abbrev_types = set(['dr', 'vs', 'mr', 'mrs', 'prof', 'inc'])
+	
+	sentence_splitter = PunktSentenceTokenizer(punkt_param)
+	sentences = sentence_splitter.tokenize(document)
+	word_tokens=[nltk.word_tokenize(s) for s in sentences]
+		
+	tags=[nltk.pos_tag(a) for a in word_tokens]
+	merged_tags = [word for sublist in tags for (word,tag) in sublist if tag in ['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']]
+	tags_fd=nltk.FreqDist(merged_tags)
+
+	return tags_fd,tags
+	
 def myRssParser(source):
 	if source.keywords and source.etag:
 		#feed=feedparser.parse(source.feed_url,etag=source.etag)
@@ -31,8 +50,27 @@ def myRssParser(source):
 	# get feed contents
 	content=[]
 	for i in feed['items']:
-		content.append({'headline':i['title'], 'link':i['id']})
+		title=i['title']
+		detail_link=i['id']
+		text_content=''
+		
+		# get linked content
+		conn=urllib2.urlopen(i['id'])
+		page=conn.read()
+		conn.close()
 
+		# clean up html		
+		data=clean_html(page)
+		tree=html.fromstring(data)
+		if 'Reuters' in source.name:
+			text_content=' '.join([j.text_content() for j in tree.cssselect('span#articleText p')])		
+		
+		fd,tags=myNLTKParser(text_content)
+		logging.info(fd.max())
+				
+		# data
+		content.append({'headline':title, 'link':detail_link, 'text':text_content, 'fd_max':fd.max(),'pos_tags':tags, 'tags_fd':fd})
+	
 	# nltk sentiments
 	#for c in content:
 	#	rss=nltk.Text(nltk.word_tokenize(c['headline']))

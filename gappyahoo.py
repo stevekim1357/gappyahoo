@@ -165,18 +165,18 @@ class RssAnalysisHandler(MyBaseHandler):
 			elif result==None: continue # status !=200, connection error
 		
 			# compile most_common keyword list
-			master_content=[r['headline'] for r in result]
-			master_interest=[]
-			for content in master_content:
-				c=Counter([i.replace('\t','').strip() for i in content.split(' ') if len(i.replace('\t','').strip())>0])
-				master_interest.append(c.most_common(100))
+			#master_content=[r['headline'] for r in result]
+			#master_interest=[]
+			#for content in master_content:
+			#	c=Counter([i.replace('\t','').strip() for i in content.split(' ') if len(i.replace('\t','').strip())>0])
+			#	master_interest.append(c.most_common(100))
 	
-			merged = [x for sublist in master_interest for x in sublist]
-			interest_list=sorted(merged,key=lambda x: x[1],reverse=True)
+			#merged = [x for sublist in master_interest for x in sublist]
+			#interest_list=sorted(merged,key=lambda x: x[1],reverse=True)
 			
 			# save to record
-			source.keywords=interest_list
-			source.put()						
+			#source.keywords=interest_list
+			#source.put()						
 		
 		# we have a list of dict {'headline':, 'link':}
 		self.response.write(json.dumps(raw_data))

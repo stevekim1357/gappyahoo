@@ -23,6 +23,14 @@
 						for (var j=0;j<feed.length;j++){
 							html+='<li>';
 							html+='<a href="'+feed[j].link+'">'+feed[j].headline+'</a>';
+							html+='<p>'+feed[j].fd_max+'</p>';
+							
+							var items=feed[j].tags_fd;
+							for(var index in items) {
+							  html+='<p>'+index + " : " + items[index] + "</p>";
+							}
+							
+							var tags=feed[j].pos_tags;
 							html+='</li>';
 						}
 						html+='</ul>';
