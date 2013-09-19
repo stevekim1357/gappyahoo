@@ -14,7 +14,6 @@ from collections import Counter
 import nltk # assuming this available
 from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
 from nltk.stem.porter import PorterStemmer
-from nltk.corpus import brown
 
 def myNLTKParser(document,tagger):
 	lexical_diversity=len(document) / len(set(document))*1.0
@@ -25,7 +24,7 @@ def myNLTKParser(document,tagger):
 	
 	# tokenize to sentence	
 	sentence_splitter = PunktSentenceTokenizer(punkt_param)
-	sentences = sentence_splitter.tokenize(document.lower())
+	sentences = sentence_splitter.tokenize(document.replace('\'s','_s'))
 	
 	# tokenize sentence to words	
 	word_tokens=[nltk.word_tokenize(s) for s in sentences]
@@ -44,18 +43,26 @@ def myNLTKParser(document,tagger):
 			
 	# POS tags
 	tags=[tagger.tag(a) for a in extended_tokens]
-	#logging.info(tags)
 	
-	tags_of_interest=['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']
-	merged_tags_uni = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple)==False]
-	merged_tags_bi = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple) and len(word)==2]
-	merged_tags_tri = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple) and len(word)==3]
+	#tags_of_interest=['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']
+	tags_of_describer=['JJ','JJR','JJS','RBR']
+	tags_of_noun=['NN']
+	merged_tags_uni = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_describer and isinstance(word,tuple)==False]
+	merged_tags_bi = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_noun and isinstance(word,tuple) and len(word)==2]
+	merged_tags_tri = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_noun and isinstance(word,tuple) and len(word)==3]
 
 	uni_tags_fd=nltk.FreqDist(merged_tags_uni)
 	bi_tags_fd=nltk.FreqDist(merged_tags_bi)
 	tri_tags_fd=nltk.FreqDist(merged_tags_tri)
 
-	return {'uni_fd':uni_tags_fd.max(),'bi_fd':bi_tags_fd.max(),'tri_fd':tri_tags_fd.max()}
+	logging.info(merged_tags_uni)
+	logging.info(merged_tags_bi)
+	logging.info(merged_tags_tri)
+	
+	return {'uni_fd':uni_tags_fd.max(),
+			'bi_fd':bi_tags_fd.max(),
+			'tri_fd':tri_tags_fd.max(), 
+			}
 	
 def myRssParser(source,tagger):
 	if source.keywords and source.etag:
@@ -91,10 +98,9 @@ def myRssParser(source,tagger):
 			text_content=' '.join([j.text_content() for j in tree.cssselect('span#articleText p')])		
 		
 		fd=myNLTKParser(text_content,tagger)
-		logging.info(fd)
 				
 		# data
-		content.append({'headline':title, 'link':detail_link, 'text':text_content, 'fd_max':fd})
+		content.append({'headline':title, 'link':detail_link, 'text':text_content, 'nltk':fd})
 	
 	# nltk sentiments
 	#for c in content:

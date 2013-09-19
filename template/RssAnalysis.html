@@ -2,48 +2,55 @@
 
 {% block customJS %}
 <script type="text/javascript">
-	j$(document).ready(function(){
-		j$('#source').change(function(){
-			var source=j$(this).val();
-			
-			j$.post(
-				'/rss',
-				{'source':source},
-				function(result){
-					var data=j$.parseJSON(result);
+	function rssParse(){
+		var source=j$('#source').val();
+		
+		j$.post(
+			'/rss',
+			{'source':source},
+			function(result){
+				var data=j$.parseJSON(result);
+				
+				var html='';
+				for (var i=0; i < data.length; i++){
+					var source_name=data[i].source;
+					html+='<div>';
+					html+='<h2 class="ariel-blue">'+source_name+'</h2>';
 					
-					var html='';
-					for (var i=0; i < data.length; i++){
-						var source_name=data[i].source;
-						html+='<div>';
-						html+='<h2 class="ariel-blue">'+source_name+'</h2>';
-						
-						var feed=data[i].feed;
-						html+='<ul>';
-						for (var j=0;j<feed.length;j++){
-							html+='<li>';
-							html+='<a href="'+feed[j].link+'">'+feed[j].headline+'</a>';
-							html+='<table class="ariel-table sf-table">';
-							html+='<tr><td>uni fd</td><td>'+feed[j].fd_max.uni_fd+'</td></tr>';
-							html+='<tr><td>bi fd</td><td>'+feed[j].fd_max.bi_fd+'</td></tr>';
-							html+='<tr><td>tri fd</td><td>'+feed[j].fd_max.tri_fd+'</td></tr>';
-							html+='</table>';
-							/*							
-							var items=feed[j].tags_fd;
-							for(var index in items) {
-							  html+='<p>'+index + " : " + items[index] + "</p>";
-							}
-							
-							var tags=feed[j].pos_tags;
-							*/
-							html+='</li>';
+					var feed=data[i].feed;
+					html+='<ul>';
+					for (var j=0;j<feed.length;j++){
+						html+='<li>';
+						html+='<a href="'+feed[j].link+'">'+feed[j].headline+'</a>';
+						html+='<table class="ariel-table sf-table">';
+						html+='<tr><td>uni fd</td><td>'+feed[j].nltk.uni_fd+'</td></tr>';
+						html+='<tr><td>bi fd</td><td>'+feed[j].nltk.bi_fd+'</td></tr>';
+						html+='<tr><td>tri fd</td><td>'+feed[j].nltk.tri_fd+'</td></tr>';
+						html+='</table>';
+						/*
+						var items=feed[j].nltk.tri_tags;
+						for(var index in items) {
+						html+='<p>'+index + " : " + items[index] + "</p>";
 						}
-						html+='</ul>';
-						html+='</div>';
+						*/
+						
+						//var tags=feed[j].pos_tags;
+						html+='</li>';
 					}
-					j$('#case-comments').html(html);
+					html+='</ul>';
+					html+='</div>';
 				}
-			);
+				j$('#case-comments').html(html);
+			}
+		);
+	}
+	
+	j$(document).ready(function(){
+		j$('#rss-analysis').click(function(){
+			rssParse();
+		});
+		j$('#source').change(function(){
+			rssParse();
 		});
 		
 		// level 1 navigation
@@ -60,14 +67,16 @@
 
 
 {% block main %}
-
+<div style="margin-bottom:20px;">
 <select id="source">
-	<option value=""></option>
 	{% for s in sources %}
 	<option value="{{s}}">{{ s }}</option>
 	{% endfor %}
 </select>
 
-<div id="case-comments">
+<span class="ariel-button" id="rss-analysis">Analyze</span>
+</div>
+
+<div id="case-comments" class="quick-pane">
 </div>
 {% endblock %}

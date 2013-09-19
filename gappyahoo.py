@@ -18,6 +18,10 @@ import jinja2
 from models import *
 from myUtil import *
 from secrets import *
+import nltk.tag
+from nltk.tag import brill
+from nltk.corpus import brown
+
 
 JINJA_ENVIRONMENT = jinja2.Environment(
 	loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
@@ -157,18 +161,38 @@ class RssAnalysisHandler(MyBaseHandler):
 
 		brown_news_tagged = brown.tagged_sents(categories='news')
 		brown_news_text = brown.sents(categories='news')
+		
 		train_sents=brown_news_tagged[100:]
+ 		
+  		templates = [
+  			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,1)),
+  			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (2,2)),
+			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,2)),
+			brill.SymmetricProximateTokensTemplate(brill.ProximateTagsRule, (1,3)),
+			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,1)),
+			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (2,2)),
+			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,2)),
+			brill.SymmetricProximateTokensTemplate(brill.ProximateWordsRule, (1,3)),
+			brill.ProximateTokensTemplate(brill.ProximateTagsRule, (-1, -1), (1,1)),
+			brill.ProximateTokensTemplate(brill.ProximateWordsRule, (-1, -1), (1,1))
+  		]
+   		
+		
 		
 		t0 = nltk.DefaultTagger('NN')
 		t1 = nltk.UnigramTagger(train_sents, backoff=t0)
 		t2 = nltk.BigramTagger(train_sents, backoff=t1)
 		t3 = nltk.TrigramTagger(train_sents, backoff=t2)
-		accu=t3.evaluate(brown_news_tagged[:100])
-		logging.info(accu)
+		
+   		trainer = brill.FastBrillTaggerTrainer(t3, templates)
+   		#braubt_tagger = trainer.train(train_sents, max_rules=100, min_score=3)
+		#accu=braubt_tagger.evaluate(brown_news_tagged[:100])
+		#logging.info(accu)
 				
 		# iterate all sources with the same root
 		raw_data=[]
 		for source in RssSource.query(RssSource.provider==target):
+			#result=myRssParser(source,tagger=braubt_tagger)
 			result=myRssParser(source,tagger=t3)
 						
 			if result: raw_data.append({'source':source.name,'feed':result})
