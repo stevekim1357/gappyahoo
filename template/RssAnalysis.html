@@ -23,14 +23,19 @@
 						for (var j=0;j<feed.length;j++){
 							html+='<li>';
 							html+='<a href="'+feed[j].link+'">'+feed[j].headline+'</a>';
-							html+='<p>'+feed[j].fd_max+'</p>';
-							
+							html+='<table class="ariel-table sf-table">';
+							html+='<tr><td>uni fd</td><td>'+feed[j].fd_max.uni_fd+'</td></tr>';
+							html+='<tr><td>bi fd</td><td>'+feed[j].fd_max.bi_fd+'</td></tr>';
+							html+='<tr><td>tri fd</td><td>'+feed[j].fd_max.tri_fd+'</td></tr>';
+							html+='</table>';
+							/*							
 							var items=feed[j].tags_fd;
 							for(var index in items) {
 							  html+='<p>'+index + " : " + items[index] + "</p>";
 							}
 							
 							var tags=feed[j].pos_tags;
+							*/
 							html+='</li>';
 						}
 						html+='</ul>';

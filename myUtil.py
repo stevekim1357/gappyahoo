@@ -13,26 +13,51 @@ import feedparser
 from collections import Counter
 import nltk # assuming this available
 from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
+from nltk.stem.porter import PorterStemmer
+from nltk.corpus import brown
 
-def myNLTKParser(document):
+def myNLTKParser(document,tagger):
 	lexical_diversity=len(document) / len(set(document))*1.0
 	
-	# POS tags
 	punkt_param = PunktParameters()
 	# if any customized abbrev
 	#punkt_param.abbrev_types = set(['dr', 'vs', 'mr', 'mrs', 'prof', 'inc'])
 	
+	# tokenize to sentence	
 	sentence_splitter = PunktSentenceTokenizer(punkt_param)
-	sentences = sentence_splitter.tokenize(document)
-	word_tokens=[nltk.word_tokenize(s) for s in sentences]
-		
-	tags=[nltk.pos_tag(a) for a in word_tokens]
-	merged_tags = [word for sublist in tags for (word,tag) in sublist if tag in ['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']]
-	tags_fd=nltk.FreqDist(merged_tags)
-
-	return tags_fd,tags
+	sentences = sentence_splitter.tokenize(document.lower())
 	
-def myRssParser(source):
+	# tokenize sentence to words	
+	word_tokens=[nltk.word_tokenize(s) for s in sentences]
+	
+ 	
+	# extend token to bigram and trigram
+	extended_tokens=[]
+	for token_list in word_tokens:
+		extended_tokens.append(token_list+nltk.bigrams(token_list)+nltk.trigrams(token_list))
+		
+	# word stemmer to normalize
+	p_stemmer = PorterStemmer()
+	stem_tokens=[]
+	for token_list in word_tokens:
+		stem_tokens.append([p_stemmer.stem(w) for w in token_list])
+			
+	# POS tags
+	tags=[tagger.tag(a) for a in extended_tokens]
+	#logging.info(tags)
+	
+	tags_of_interest=['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']
+	merged_tags_uni = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple)==False]
+	merged_tags_bi = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple) and len(word)==2]
+	merged_tags_tri = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple) and len(word)==3]
+
+	uni_tags_fd=nltk.FreqDist(merged_tags_uni)
+	bi_tags_fd=nltk.FreqDist(merged_tags_bi)
+	tri_tags_fd=nltk.FreqDist(merged_tags_tri)
+
+	return {'uni_fd':uni_tags_fd.max(),'bi_fd':bi_tags_fd.max(),'tri_fd':tri_tags_fd.max()}
+	
+def myRssParser(source,tagger):
 	if source.keywords and source.etag:
 		#feed=feedparser.parse(source.feed_url,etag=source.etag)
 		feed=feedparser.parse(source.feed_url)
@@ -65,11 +90,11 @@ def myRssParser(source):
 		if 'Reuters' in source.name:
 			text_content=' '.join([j.text_content() for j in tree.cssselect('span#articleText p')])		
 		
-		fd,tags=myNLTKParser(text_content)
-		logging.info(fd.max())
+		fd=myNLTKParser(text_content,tagger)
+		logging.info(fd)
 				
 		# data
-		content.append({'headline':title, 'link':detail_link, 'text':text_content, 'fd_max':fd.max(),'pos_tags':tags, 'tags_fd':fd})
+		content.append({'headline':title, 'link':detail_link, 'text':text_content, 'fd_max':fd})
 	
 	# nltk sentiments
 	#for c in content:

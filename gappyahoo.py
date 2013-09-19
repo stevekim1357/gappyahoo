@@ -154,11 +154,22 @@ class RssAnalysisHandler(MyBaseHandler):
 		
 	def post(self):
 		target=self.request.get('source')
+
+		brown_news_tagged = brown.tagged_sents(categories='news')
+		brown_news_text = brown.sents(categories='news')
+		train_sents=brown_news_tagged[100:]
 		
+		t0 = nltk.DefaultTagger('NN')
+		t1 = nltk.UnigramTagger(train_sents, backoff=t0)
+		t2 = nltk.BigramTagger(train_sents, backoff=t1)
+		t3 = nltk.TrigramTagger(train_sents, backoff=t2)
+		accu=t3.evaluate(brown_news_tagged[:100])
+		logging.info(accu)
+				
 		# iterate all sources with the same root
 		raw_data=[]
 		for source in RssSource.query(RssSource.provider==target):
-			result=myRssParser(source)
+			result=myRssParser(source,tagger=t3)
 						
 			if result: raw_data.append({'source':source.name,'feed':result})
 			elif len(result)==0: continue # no change
