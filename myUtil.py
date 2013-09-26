@@ -15,6 +15,21 @@ import nltk # assuming this available
 from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
 from nltk.stem.porter import PorterStemmer
 
+# http://www.textfixer.com/resources/common-english-words.php
+stopwords='''
+a,able,about,across,after,all,almost,also,am,among,an,and,any,are,as,at,be,because,been,but,by,can,cannot,could,dear,did,do,does,either,else,ever,every,for,from,get,got,had,has,have,he,her,hers,him,his,how,however,i,if,in,into,is,it,its,just,least,let,like,likely,may,me,might,most,must,my,neither,no,nor,not,of,off,often,on,only,or,other,our,own,rather,said,say,says,she,should,since,so,some,than,that,the,their,them,then,there,these,they,this,tis,to,too,twas,us,wants,was,we,were,what,when,where,which,while,who,whom,why,will,with,would,yet,you,your,
+'tis, 'twas, a, able, about, across, after, ain't, all, almost, also, am, among, an, and, any, are, aren't, as, at, be, because, been, but, by, can, 
+can't, cannot, could, could've, couldn't, dear, did, didn't, do, does, doesn't, don't, either, else, ever, every, for, from, get, got, had, has, 
+hasn't, have, he, he'd, he'll, he's, her, hers, him, his, how, how'd, how'll, how's, however, i, i'd, i'll, i'm, i've, if, in, into, is, isn't, it, 
+it's, its, just, least, let, like, likely, may, me, might, might've, mightn't, most, must, must've, mustn't, my, neither, no, nor, not, of, off, 
+often, on, only, or, other, our, own, rather, said, say, says, shan't, she, she'd, she'll, she's, should, should've, shouldn't, since, so, some, 
+than, that, that'll, that's, the, their, them, then, there, there's, these, they, they'd, they'll, they're, they've, this, tis, to, too, twas, us, 
+wants, was, wasn't, we, we'd, we'll, we're, were, weren't, what, what'd, what's, when, when, when'd, when'll, when's, where, where'd, where'll, 
+where's, which, while, who, who'd, who'll, who's, whom, why, why'd, why'll, why's, will, with, won't, would, would've, wouldn't, yet, you, you'd, 
+you'll, you're, you've, your,.,",$,
+'''
+stopwords=set([w.strip() for w in stopwords.split(',')]+[','])
+
 def myNLTKParser(document,tagger):
 	lexical_diversity=len(document) / len(set(document))*1.0
 	
@@ -27,9 +42,8 @@ def myNLTKParser(document,tagger):
 	sentences = sentence_splitter.tokenize(document.replace('\'s','_s'))
 	
 	# tokenize sentence to words	
-	word_tokens=[nltk.word_tokenize(s) for s in sentences]
-	
- 	
+	word_tokens=[[w for w in nltk.word_tokenize(s) if not w in stopwords] for s in sentences]
+
 	# extend token to bigram and trigram
 	extended_tokens=[]
 	for token_list in word_tokens:
@@ -44,21 +58,17 @@ def myNLTKParser(document,tagger):
 	# POS tags
 	tags=[tagger.tag(a) for a in extended_tokens]
 	
-	#tags_of_interest=['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']
-	tags_of_describer=['JJ','JJR','JJS','RBR']
+	tags_of_verbs=['VB','VBP','VBG']
+	tags_of_interest=['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']
 	tags_of_noun=['NN']
-	merged_tags_uni = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_describer and isinstance(word,tuple)==False]
-	merged_tags_bi = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_noun and isinstance(word,tuple) and len(word)==2]
-	merged_tags_tri = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_noun and isinstance(word,tuple) and len(word)==3]
+	merged_tags_uni = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_verbs and isinstance(word,tuple)==False]
+	merged_tags_bi = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple) and len(word)==2]
+	merged_tags_tri = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_interest and isinstance(word,tuple) and len(word)==3]
 
 	uni_tags_fd=nltk.FreqDist(merged_tags_uni)
 	bi_tags_fd=nltk.FreqDist(merged_tags_bi)
 	tri_tags_fd=nltk.FreqDist(merged_tags_tri)
 
-	logging.info(merged_tags_uni)
-	logging.info(merged_tags_bi)
-	logging.info(merged_tags_tri)
-	
 	return {'uni_fd':uni_tags_fd.max(),
 			'bi_fd':bi_tags_fd.max(),
 			'tri_fd':tri_tags_fd.max(), 
@@ -84,28 +94,29 @@ def myRssParser(source,tagger):
 	for i in feed['items']:
 		title=i['title']
 		detail_link=i['id']
+		source_timestamp=i['updated_parsed']
+		
 		text_content=''
 		
 		# get linked content
-		conn=urllib2.urlopen(i['id'])
-		page=conn.read()
-		conn.close()
-
+		try:
+			conn=urllib2.urlopen(i['id'])
+			page=conn.read()
+			conn.close()
+		except: continue
+		
 		# clean up html		
 		data=clean_html(page)
 		tree=html.fromstring(data)
 		if 'Reuters' in source.name:
 			text_content=' '.join([j.text_content() for j in tree.cssselect('span#articleText p')])		
-		
+
+		# nltk analysis
 		fd=myNLTKParser(text_content,tagger)
 				
 		# data
-		content.append({'headline':title, 'link':detail_link, 'text':text_content, 'nltk':fd})
+		content.append({'headline':title, 'link':detail_link, 'text':text_content, 'nltk':fd, 'source_timestamp':source_timestamp})
 	
-	# nltk sentiments
-	#for c in content:
-	#	rss=nltk.Text(nltk.word_tokenize(c['headline']))
-
 	return content
 	
 def myHTMLParser(url,css,length,depth,current_depth,hit_list):

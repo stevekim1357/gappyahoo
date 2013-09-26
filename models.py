@@ -180,7 +180,12 @@ class RssSource(ndb.Model):
 	provider=ndb.StringProperty() # user given idenntifiers, eg. Reuters, Bloomberg
 	keywords=ndb.PickleProperty()
 	
-	
+class RssFeed(ndb.Model):
+	source=ndb.KeyProperty(kind='RssSource')
+	title=ndb.StringProperty(required=True)
+	text=ndb.TextProperty(required=True)
+	source_timestamp=ndb.DateTimeProperty()
+		
 class NewsSource(ndb.Model):
 	url=ndb.StringProperty(required=True)
 	source=ndb.StringProperty(default='Other')

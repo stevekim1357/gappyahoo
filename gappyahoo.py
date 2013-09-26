@@ -11,8 +11,7 @@ import os
 import json
 import cgi
 import logging
-import datetime
-import time
+import datetime,time
 import jwt # google wallet token
 import jinja2
 from models import *
@@ -21,7 +20,6 @@ from secrets import *
 import nltk.tag
 from nltk.tag import brill
 from nltk.corpus import brown
-
 
 JINJA_ENVIRONMENT = jinja2.Environment(
 	loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
@@ -65,15 +63,15 @@ class ComplexEncoder(json.JSONEncoder):
 			epoch = datetime.datetime.utcfromtimestamp(0)
 			delta = obj - epoch
 			return delta.total_seconds()
+		elif isinstance(obj, time.struct_time):
+			return {'__class__': 'time.asctime',
+            		'__value__': time.asctime(obj)} 
 		elif isinstance(obj,users.User):
 			return {'email':obj.email(),'id':obj.user_id(),'nickname':obj.nickname()}
 		elif isinstance(obj,ndb.Key):
 			if obj.kind()=='Contact':
 				contact=obj.get()
 				return {'name':contact.nickname,'email':contact.email,'id':contact.key.id()}
-			elif obj.kind()=='BuyOrder':
-				o=obj.get()
-				return {'name':o.name,'description':o.description,'id':o.key.id(),'owner':o.owner}
 		else:
 			return json.JSONEncoder.default(self, obj)
 
@@ -192,29 +190,33 @@ class RssAnalysisHandler(MyBaseHandler):
 		# iterate all sources with the same root
 		raw_data=[]
 		for source in RssSource.query(RssSource.provider==target):
+			# choose which tagger to use
+			# Brill tagger is very slow
+			
 			#result=myRssParser(source,tagger=braubt_tagger)
 			result=myRssParser(source,tagger=t3)
 						
-			if result: raw_data.append({'source':source.name,'feed':result})
+			if result: 
+				raw_data.append({'source':source.name,'feed':result})
+				
+				# save feeds to data store
+				all_saved_feeds=RssFeed.query(RssFeed.source==source.key)
+				for c in result:
+					dt = datetime.datetime.fromtimestamp(time.mktime(c['source_timestamp']))
+					
+					existing=all_saved_feeds.filter(RssFeed.title==c['headline'][:500])
+					if existing.get() is not None:
+						continue
+					else:
+						new_feed=RssFeed(source=source.key,title=c['headline'][:500],text=c['text'],
+								source_timestamp=dt)
+						new_feed.put()
+                                                    				
 			elif len(result)==0: continue # no change
 			elif result==None: continue # status !=200, connection error
 		
-			# compile most_common keyword list
-			#master_content=[r['headline'] for r in result]
-			#master_interest=[]
-			#for content in master_content:
-			#	c=Counter([i.replace('\t','').strip() for i in content.split(' ') if len(i.replace('\t','').strip())>0])
-			#	master_interest.append(c.most_common(100))
-	
-			#merged = [x for sublist in master_interest for x in sublist]
-			#interest_list=sorted(merged,key=lambda x: x[1],reverse=True)
-			
-			# save to record
-			#source.keywords=interest_list
-			#source.put()						
-		
 		# we have a list of dict {'headline':, 'link':}
-		self.response.write(json.dumps(raw_data))
+		self.response.write(json.dumps(raw_data, cls=ComplexEncoder))
 				
 ####################################################
 #
