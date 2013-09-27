@@ -14,6 +14,8 @@ from collections import Counter
 import nltk # assuming this available
 from nltk.tokenize.punkt import PunktSentenceTokenizer, PunktParameters
 from nltk.stem.porter import PorterStemmer
+import nltk.chunk
+import itertools
 
 # http://www.textfixer.com/resources/common-english-words.php
 stopwords='''
@@ -30,6 +32,27 @@ you'll, you're, you've, your,.,",$,
 '''
 stopwords=set([w.strip() for w in stopwords.split(',')]+[','])
 
+ 
+class TagChunker(nltk.chunk.ChunkParserI):
+	def __init__(self, chunk_tagger):
+		self._chunk_tagger = chunk_tagger
+  
+	def parse(self, tokens):
+		# split words and part of speech tags
+		(words, tags) = zip(*tokens)
+
+		# get IOB chunk tags
+		chunks = self._chunk_tagger.tag(tags)
+
+		# join words with chunk tags
+		wtc = itertools.izip(words, chunks)
+		
+		# w = word, t = part-of-speech tag, c = chunk tag
+		lines = [' '.join([w, t, c]) for (w, (t, c)) in wtc if c]
+		
+		# create tree from conll formatted chunk lines
+		return nltk.chunk.conllstr2tree('\n'.join(lines))
+  
 def myNLTKParser(document,tagger):
 	lexical_diversity=len(document) / len(set(document))*1.0
 	
@@ -42,7 +65,7 @@ def myNLTKParser(document,tagger):
 	sentences = sentence_splitter.tokenize(document.replace('\'s','_s'))
 	
 	# tokenize sentence to words	
-	word_tokens=[[w for w in nltk.word_tokenize(s) if not w in stopwords] for s in sentences]
+	word_tokens=[[w.strip() for w in nltk.word_tokenize(s) if not w.strip().lower() in stopwords] for s in sentences]
 
 	# extend token to bigram and trigram
 	extended_tokens=[]
@@ -58,7 +81,7 @@ def myNLTKParser(document,tagger):
 	# POS tags
 	tags=[tagger.tag(a) for a in extended_tokens]
 	
-	tags_of_verbs=['VB','VBP','VBG']
+	tags_of_verbs=['NN','VB','VBP','VBG']
 	tags_of_interest=['JJ','JJR','JJS','NN','NNP','NNPS','NNS','RB','RBR','RBS']
 	tags_of_noun=['NN']
 	merged_tags_uni = [word for sublist in tags for (word,tag) in sublist if tag in tags_of_verbs and isinstance(word,tuple)==False]
